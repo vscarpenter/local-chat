@@ -1,0 +1,11 @@
+# CODEOWNERS defines who reviews and approves changes by default.
+# Syntax: https://docs.github.com/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
+
+# Repo-wide owners
+* @vscarpenter
+
+# Optional granularity (kept simple for now)
+src/** @vscarpenter
+scripts/** @vscarpenter
+styles/** @vscarpenter
+
