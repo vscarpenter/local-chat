@@ -1,0 +1,42 @@
+{
+  "name": "chatgpt-at-home",
+  "version": "1.0.0",
+  "description": "A local ChatGPT-like web application using Vue.js 3 and Ollama",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "serve": "vite preview --port 3000",
+    "start:ollama": "node scripts/start-helper.js ollama",
+    "start:web": "node scripts/start-helper.js web", 
+    "start:all": "node scripts/start-helper.js all",
+    "start": "node scripts/start-helper.js all",
+    "stop": "node scripts/start-helper.js stop"
+  },
+  "keywords": [
+    "vue",
+    "vue3",
+    "ollama",
+    "chatgpt",
+    "ai",
+    "chat",
+    "local"
+  ],
+  "author": {
+    "name": "Vinny Carpenter",
+    "url": "https://vinny.dev/"
+  },
+  "license": "MIT",
+  "dependencies": {
+    "vue": "^3.4.15"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-vue": "^5.2.4",
+    "vite": "^6.3.5"
+  },
+  "engines": {
+    "node": ">=16.0.0",
+    "npm": ">=8.0.0"
+  }
+}
