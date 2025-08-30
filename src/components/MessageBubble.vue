@@ -5,6 +5,7 @@
       `message-${message.role}`,
       { 'message-streaming': message.isStreaming }
     ]"
+    :data-mid="message.id"
   >
     <div class="message-header">
       <div class="message-avatar">
@@ -57,6 +58,7 @@
         class="message-text"
         v-html="formattedContent"
         :class="{ 'streaming': message.isStreaming }"
+        :aria-live="message.role === 'assistant' ? 'polite' : 'off'"
       ></div>
       
       <div v-if="message.isStreaming" class="streaming-indicator">
@@ -71,7 +73,7 @@
 </template>
 
 <script setup>
-import { computed, ref } from 'vue'
+import { computed, ref, onMounted, onUpdated } from 'vue'
 
 const props = defineProps({
   message: {
@@ -216,6 +218,50 @@ const formattedContent = computed(() => {
   return content
 })
 
+function enhanceCodeBlocks() {
+  const container = document.querySelector(`[data-mid="${props.message.id}"]`) || null
+  const root = container || null
+  const scope = root || null
+  const messageNode = scope || null
+}
+
+function attachCopyButtons() {
+  const host = document.querySelector(`[data-mid="${props.message.id}"] .message-text`) || null
+  if (!host) return
+  const pres = host.querySelectorAll('pre')
+  pres.forEach(pre => {
+    if (pre.querySelector('.code-copy')) return
+    pre.style.position = 'relative'
+    const btn = document.createElement('button')
+    btn.className = 'code-copy'
+    btn.type = 'button'
+    btn.title = 'Copy code'
+    btn.innerHTML = '<span>Copy</span>'
+    btn.addEventListener('click', async (e) => {
+      e.preventDefault()
+      try {
+        const code = pre.querySelector('code')?.innerText || ''
+        await navigator.clipboard.writeText(code)
+        btn.innerHTML = '<span>Copied</span>'
+        setTimeout(() => (btn.innerHTML = '<span>Copy</span>'), 1500)
+      } catch {}
+    })
+    pre.appendChild(btn)
+  })
+}
+
+onMounted(() => {
+  // Mark container with data-mid for scoping
+  const root = document.currentScript?.ownerDocument || document
+  const wrappers = document.querySelectorAll('.message-bubble')
+  // Attach copy buttons after mount
+  attachCopyButtons()
+})
+
+onUpdated(() => {
+  attachCopyButtons()
+})
+
 // Convert GitHub-style markdown tables to HTML tables
 function processMarkdownTables(input) {
   if (!input || !input.includes('|')) return input
@@ -290,15 +336,16 @@ const copyMessage = async () => {
 .message-bubble {
   display: flex;
   flex-direction: column;
-  margin-bottom: var(--space-4);
+  margin-bottom: var(--space-6);
   max-width: 100%;
-  opacity: 1;
-  transform: translateY(0);
-  transition: all var(--transition-normal);
+  opacity: 0;
+  transform: translateY(20px);
+  transition: all var(--transition-spring);
+  animation: fadeIn 0.5s cubic-bezier(0.4, 0, 0.2, 1) forwards;
 }
 
 .message-bubble.animate-fadeIn {
-  animation: fadeIn 0.3s ease-out;
+  animation: fadeIn 0.5s cubic-bezier(0.4, 0, 0.2, 1) forwards;
 }
 
 .message-header {
@@ -354,21 +401,32 @@ const copyMessage = async () => {
   display: flex;
   gap: var(--space-1);
   opacity: 0;
-  transition: opacity var(--transition-fast);
+  transform: translateY(4px);
+  transition: all var(--transition-spring);
 }
 
 .message-bubble:hover .message-actions {
   opacity: 1;
+  transform: translateY(0);
 }
 
 .action-btn {
-  padding: var(--space-1);
+  padding: var(--space-2);
   color: var(--text-tertiary);
-  transition: color var(--transition-fast);
+  border-radius: var(--radius-md);
+  transition: all var(--transition-spring);
+  position: relative;
+  overflow: hidden;
 }
 
 .action-btn:hover {
   color: var(--text-primary);
+  background-color: var(--bg-secondary);
+  transform: scale(1.1);
+}
+
+.action-btn:active {
+  transform: scale(0.95);
 }
 
 .message-content {
@@ -377,26 +435,33 @@ const copyMessage = async () => {
 }
 
 .message-text {
-  padding: var(--space-3) var(--space-4);
-  border-radius: var(--radius-lg);
+  padding: var(--space-4) var(--space-5);
+  border-radius: var(--radius-xl);
   font-size: var(--font-size-base);
   line-height: var(--line-height-relaxed);
   word-wrap: break-word;
   overflow-wrap: break-word;
+  position: relative;
+  backdrop-filter: blur(10px);
+  box-shadow: var(--shadow-md);
+  transition: all var(--transition-normal);
 }
 
 .message-user .message-text {
-  background-color: var(--bg-chat-user);
-  color: var(--text-primary);
+  background: var(--bg-chat-user);
+  color: var(--text-button);
   margin-left: auto;
   margin-right: 0;
   max-width: 85%;
+  border-radius: var(--radius-xl) var(--radius-xl) var(--radius-sm) var(--radius-xl);
+  box-shadow: var(--shadow-gradient);
 }
 
 .message-assistant .message-text {
   background-color: var(--bg-chat-ai);
   color: var(--text-primary);
   border: 1px solid var(--border-primary);
+  border-radius: var(--radius-xl) var(--radius-xl) var(--radius-xl) var(--radius-sm);
 }
 
 .message-text.streaming {
@@ -522,6 +587,35 @@ const copyMessage = async () => {
   opacity: 0.7;
 }
 
+/* Code block copy button */
+.message-text :deep(pre) {
+  position: relative;
+}
+
+.message-text :deep(.code-copy) {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  font-size: 12px;
+  line-height: 1;
+  padding: 6px 8px;
+  background: var(--bg-primary);
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+
+.message-text :deep(.code-copy:hover) {
+  color: var(--text-primary);
+  background: var(--bg-secondary);
+}
+
+/* Table zebra striping */
+.message-text :deep(table.md-table tbody tr:nth-child(even)) {
+  background: color-mix(in srgb, var(--bg-secondary) 60%, transparent);
+}
+
 /* Tables */
 .message-text :deep(table.md-table) {
   width: 100%;
@@ -544,6 +638,9 @@ const copyMessage = async () => {
   background-color: var(--bg-secondary);
   color: var(--text-primary);
   font-weight: var(--font-weight-semibold);
+  position: sticky;
+  top: 0;
+  z-index: 1;
 }
 
 .message-text :deep(table.md-table tr:last-child td) {

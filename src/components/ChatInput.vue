@@ -417,15 +417,17 @@ defineExpose({
   gap: var(--space-3);
   background-color: var(--bg-secondary);
   border: 2px solid var(--border-input);
-  border-radius: var(--radius-xl);
+  border-radius: var(--radius-2xl);
   padding: var(--space-3);
-  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+  transition: all var(--transition-spring);
   position: relative;
+  backdrop-filter: blur(10px);
 }
 
 .input-container:focus-within {
   border-color: var(--border-input-focus);
-  box-shadow: 0 0 0 3px rgba(16, 163, 127, 0.1);
+  box-shadow: 0 0 0 4px rgba(16, 163, 127, 0.15), var(--shadow-lg);
+  transform: translateY(-2px);
 }
 
 .textarea-container {
@@ -453,6 +455,10 @@ defineExpose({
 
 .message-input::placeholder {
   color: var(--text-tertiary);
+}
+
+.chat-input-container.is-inline .input-container:focus-within {
+  box-shadow: 0 0 0 4px rgba(16, 163, 127, 0.12);
 }
 
 .message-input:disabled {
@@ -489,24 +495,29 @@ defineExpose({
   align-items: center;
   justify-content: center;
   padding: 0;
-  transition: all var(--transition-fast);
+  transition: all var(--transition-spring);
   position: relative;
   overflow: hidden;
+  background: var(--bg-button);
+  box-shadow: var(--shadow-md);
 }
 
 .send-button:disabled {
   opacity: 0.4;
   transform: none;
   cursor: not-allowed;
+  box-shadow: none;
 }
 
 .send-button:not(:disabled):hover {
-  transform: scale(1.05);
-  box-shadow: var(--shadow-md);
+  transform: translateY(-2px) scale(1.05);
+  box-shadow: var(--shadow-xl);
+  background: var(--bg-button-hover);
 }
 
 .send-button:not(:disabled):active {
-  transform: scale(0.95);
+  transform: translateY(0) scale(0.95);
+  box-shadow: var(--shadow-md);
 }
 
 .send-button.is-loading {

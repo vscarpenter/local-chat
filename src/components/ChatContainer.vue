@@ -89,7 +89,7 @@
     </header>
 
     <!-- Main Layout -->
-    <div class="chat-layout">
+    <div class="chat-layout" ref="layoutRef">
       <ChatSidebar
         :is-open="showSidebar"
         :conversations="conversations"
@@ -99,6 +99,7 @@
         @rename="({ id, title }) => renameConversation(id, title)"
         @delete="handleDeleteConversation"
       />
+      <div class="sidebar-resizer" @mousedown="beginResize" title="Resize sidebar" aria-label="Resize sidebar"></div>
 
       <main class="chat-main" @click="hideMenu">
         <MessageList
@@ -215,6 +216,7 @@ import LogoMark from './LogoMark.vue'
 import ChatSidebar from './ChatSidebar.vue'
 
 const chat = useChat()
+const layoutRef = ref(null)
 const chatInputRef = ref(null)
 const welcomeChatInputRef = ref(null)
 const showMenu = ref(false)
@@ -255,6 +257,8 @@ const {
 const isConnecting = ref(false)
 const currentModel = ref('gpt-oss:20b')
 const showSidebar = ref(true)
+const sidebarWidth = ref(parseInt(localStorage.getItem('sidebar-width') || getComputedStyle(document.documentElement).getPropertyValue('--sidebar-width')) || 260)
+let resizing = false
 
 const connectionStatusClass = computed(() => ({
   'status-connected': isConnected.value,
@@ -517,6 +521,7 @@ function handleKeyboardShortcuts(event) {
 onMounted(() => {
   document.addEventListener('keydown', handleKeyboardShortcuts)
   handleRetryConnection()
+  applySidebarWidth(sidebarWidth.value)
 })
 
 onBeforeUnmount(() => {
@@ -524,6 +529,37 @@ onBeforeUnmount(() => {
   if (errorTimeout.value) clearTimeout(errorTimeout.value)
   if (successTimeout.value) clearTimeout(successTimeout.value)
 })
+
+function applySidebarWidth(px) {
+  const clamped = Math.min(Math.max(px, 200), 380)
+  if (layoutRef.value) {
+    layoutRef.value.style.setProperty('--sidebar-width', clamped + 'px')
+  } else {
+    document.documentElement.style.setProperty('--sidebar-width', clamped + 'px')
+  }
+}
+
+function beginResize(e) {
+  resizing = true
+  document.body.style.cursor = 'col-resize'
+  const startX = e.clientX
+  const startWidth = sidebarWidth.value
+  const onMove = (ev) => {
+    if (!resizing) return
+    const delta = ev.clientX - startX
+    sidebarWidth.value = Math.min(Math.max(startWidth + delta, 200), 380)
+    applySidebarWidth(sidebarWidth.value)
+  }
+  const onUp = () => {
+    resizing = false
+    document.body.style.cursor = ''
+    localStorage.setItem('sidebar-width', String(sidebarWidth.value))
+    window.removeEventListener('mousemove', onMove)
+    window.removeEventListener('mouseup', onUp)
+  }
+  window.addEventListener('mousemove', onMove)
+  window.addEventListener('mouseup', onUp)
+}
 </script>
 
 <style scoped>
@@ -538,18 +574,32 @@ onBeforeUnmount(() => {
 
 .chat-layout {
   display: grid;
-  grid-template-columns: 260px 1fr;
+  grid-template-columns: var(--sidebar-width, 260px) 6px 1fr;
   min-height: 0;
   flex: 1;
 }
 
+.sidebar-resizer {
+  cursor: col-resize;
+  background: transparent;
+}
+
+.sidebar-resizer:hover {
+  background: var(--border-primary);
+}
+
 /* Header */
 .chat-header {
-  background-color: var(--bg-primary);
+  position: sticky;
+  top: 0;
+  background: linear-gradient(135deg, rgba(255,255,255,0.9) 0%, rgba(248,250,252,0.9) 100%);
+  backdrop-filter: saturate(180%) blur(20px);
   border-bottom: 1px solid var(--border-primary);
-  padding: var(--space-3) var(--space-4);
+  padding: var(--space-4) var(--space-4);
   flex-shrink: 0;
   z-index: 20;
+  box-shadow: var(--shadow-sm);
+  transition: all var(--transition-normal);
 }
 
 .header-content {
@@ -583,13 +633,17 @@ onBeforeUnmount(() => {
 }
 
 .app-name {
-  font-size: var(--font-size-lg);
-  font-weight: var(--font-weight-bold);
-  color: var(--text-primary);
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-extrabold);
+  background: var(--text-gradient);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
   margin: 0;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  letter-spacing: var(--letter-spacing-tight);
 }
 
 .connection-status {
@@ -634,8 +688,12 @@ onBeforeUnmount(() => {
 
 @media (max-width: 900px) {
   .chat-layout {
-    grid-template-columns: 0 1fr;
+    grid-template-columns: 0 0 1fr;
   }
+}
+
+[data-theme="dark"] .chat-header {
+  background: linear-gradient(135deg, rgba(15,23,42,0.9) 0%, rgba(30,41,59,0.9) 100%);
 }
 
 .model-info {
